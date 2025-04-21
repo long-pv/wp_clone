@@ -66,13 +66,13 @@ wp-content/upgrade-temp-backup
 !wp-content/themes/*/inc/export_pdf/*.lock
 
 # wp-content / theme
-wp-content/themes/twentytwentyone
-wp-content/themes/twentytwentytwo
-wp-content/themes/twentytwentythree
-wp-content/themes/twentytwentyfour
+# wp-content/themes/twentytwentyone
+# wp-content/themes/twentytwentytwo
+# wp-content/themes/twentytwentythree
+# wp-content/themes/twentytwentyfour
 
 # wp-content / theme / inc
-wp-content/themes/*/inc/custom-header.php
-wp-content/themes/*/inc/customizer.php
-wp-content/themes/*/inc/jetpack.php
-wp-content/themes/*/inc/template-tags.php
+# wp-content/themes/*/inc/custom-header.php
+# wp-content/themes/*/inc/customizer.php
+# wp-content/themes/*/inc/jetpack.php
+# wp-content/themes/*/inc/template-tags.php
