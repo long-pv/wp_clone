@@ -176,8 +176,8 @@ function xemer_theme_scripts()
 	//add custom main css/js
 	$main_css_file_path = get_template_directory() . '/assets/css/main.css';
 	$main_js_file_path = get_template_directory() . '/assets/js/main.js';
-	$ver_main_css = file_exists($main_css_file_path) ? filemtime($main_css_file_path) : '1.0.0';
-	$ver_main_js = file_exists($main_js_file_path) ? filemtime($main_js_file_path) : '1.0.0';
+	$ver_main_css = file_exists($main_css_file_path) ? filemtime($main_css_file_path) : _S_VERSION;
+	$ver_main_js = file_exists($main_js_file_path) ? filemtime($main_js_file_path) : _S_VERSION;
 	wp_enqueue_style('xemer_theme-style-main', get_template_directory_uri() . '/assets/css/main.css', array(), $ver_main_css);
 	wp_enqueue_script('xemer_theme-script-main', get_template_directory_uri() . '/assets/js/main.js', array('jquery'), $ver_main_js, true);
 }
