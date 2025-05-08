@@ -201,6 +201,11 @@ function xemer_theme_custom_admin_footer()
 }
 add_filter('admin_footer_text', 'xemer_theme_custom_admin_footer');
 
+// tối đa revision
+add_filter('wp_revisions_to_keep', function ($num, $post) {
+	return 3;
+}, 10, 2);
+
 // function
 require get_template_directory() . '/inc/auto_active_plugin.php';
 require get_template_directory() . '/inc/breadcrumbs.php';
