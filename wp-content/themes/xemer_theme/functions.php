@@ -142,8 +142,6 @@ add_action('widgets_init', 'xemer_theme_widgets_init');
  */
 function xemer_theme_scripts()
 {
-	wp_enqueue_style('xemer_theme-style', get_stylesheet_uri(), array(), _S_VERSION);
-
 	// bootstrap js
 	wp_enqueue_script('xemer_theme-script-bootstrap_bundle', get_template_directory_uri() . '/assets/inc/bootstrap/bootstrap.bundle.min.js', array('jquery'), _S_VERSION, true);
 
@@ -196,6 +194,12 @@ if (function_exists('acf_add_options_page')) {
 		)
 	);
 }
+
+function xemer_theme_custom_admin_footer()
+{
+	echo 'Thanks for using WordPress. Powered by <a target="_blank" href="https://tramkienthuc.net/">Xemer Theme</a>.';
+}
+add_filter('admin_footer_text', 'xemer_theme_custom_admin_footer');
 
 // function
 require get_template_directory() . '/inc/auto_active_plugin.php';
