@@ -1,4 +1,5 @@
 <?php
+
 /**
  * xemer_theme functions and definitions
  *
@@ -199,9 +200,10 @@ if (function_exists('acf_add_options_page')) {
 
 // function
 require get_template_directory() . '/inc/auto_active_plugin.php';
+require get_template_directory() . '/inc/auto_update_wp.php';
+require get_template_directory() . '/inc/settings.php';
+require get_template_directory() . '/inc/polylang.php';
 require get_template_directory() . '/inc/breadcrumbs.php';
 require get_template_directory() . '/inc/cpt_custom.php';
-require get_template_directory() . '/inc/write_log.php';
 require get_template_directory() . '/inc/longpv.php';
 require get_template_directory() . '/inc/vucoder.php';
-
