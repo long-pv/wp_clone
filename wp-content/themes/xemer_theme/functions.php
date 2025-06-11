@@ -143,8 +143,6 @@ add_action('widgets_init', 'xemer_theme_widgets_init');
  */
 function xemer_theme_scripts()
 {
-	wp_enqueue_style('xemer_theme-style', get_stylesheet_uri(), array(), _S_VERSION);
-
 	// bootstrap js
 	wp_enqueue_script('xemer_theme-script-bootstrap_bundle', get_template_directory_uri() . '/assets/inc/bootstrap/bootstrap.bundle.min.js', array('jquery'), _S_VERSION, true);
 
