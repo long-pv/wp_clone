@@ -349,7 +349,7 @@ function cerber_show_diag(){
 
 	    cerber_show_wp_diag();
 
-        if ( $errors = crb_create_log_file_view( crb_get_diag_dir() . 'cerber-errors.log', 'crb-sw-errors-list' ) ) {
+        if ( $errors = crb_create_log_file_view( crb_get_diag_dir() . CRB_ERROR_LOG, 'crb-sw-errors-list' ) ) {
 	        $cta = '<p>Something’s not quite right, but we’re always working to make WP Cerber more robust. Help us improve by reporting these issues here: <a href="https://wpcerber.com/bug-report/" target="_blank">https://wpcerber.com/bug-report/</a></p>';
 	        crb_show_diag_section( 'WP Cerber Software Errors', $errors, array( 'copy_class' => 'crb-sw-errors-list', 'subtitle' => $cta ) );
         }
@@ -445,7 +445,7 @@ function cerber_show_diag(){
 			    }
 
 			    if ( ! empty( $alert[17] ) ) {
-				    if ( $us = get_userdata( $alert[17] ) ) {
+				    if ( $us = crb_get_userdata( $alert[17] ) ) {
 					    $rp = ( get_current_user_id() == $alert[17] ) ? 'Your email' : ( 'User\'s email (' . $us->display_name . ')' );
 					    $al_info [] = $rp . ': ' . $us->user_email;
 				    }
@@ -813,7 +813,7 @@ function crb_create_log_file_view( string $file_path, string $item_class = '' ):
 		$errors = '';
 
 		foreach ( $entry['errors'] as $error ) {
-			$errors .= "Type:\t" . cerber_get_err_type( $error[0] ) . '<br/>';
+			$errors .= "Level:\t" . cerber_get_err_level( $error[0] ) . '<br/>';
 
 			$file = str_replace( $root_dir, '', $error[2] );
 			$errors .= "File:\t" . esc_textarea( $file ) . '<br/>';
@@ -1348,7 +1348,7 @@ function lab_status() {
 		}
 
 		if ( $country = lab_get_country( $node_ip, false ) ) {
-			$country = cerber_country_name( $country );
+			$country = crb_get_country_name( $country );
 		}
 		else {
 			$country = '';

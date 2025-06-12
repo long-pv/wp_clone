@@ -265,7 +265,7 @@ final class CRB_Activity {
 					}
 					elseif ( $user_id ) {
 						if ( ! $user = wp_get_current_user() ) {
-							$user = get_userdata( $user_id );
+							$user = crb_get_userdata( $user_id );
 						}
 						if ( false !== mb_stripos( $user->user_firstname, $alert[6] )
 						     || false !== mb_stripos( $user->user_lastname, $alert[6] )
@@ -302,13 +302,13 @@ final class CRB_Activity {
 				$msg[] = __( 'Activity', 'wp-cerber' ) . ': ' . $ac_lbl . $status_lbl;
 				$msg_masked = $msg;
 
-				$coname = $country ? ' (' . cerber_country_name( $country ) . ')' : '';
+				$coname = $country ? ' (' . crb_get_country_name( $country ) . ')' : '';
 
 				$msg[] = __( 'IP address', 'wp-cerber' ) . ': ' . $ip . $coname;
 				$msg_masked[] = __( 'IP address', 'wp-cerber' ) . ': ' . crb_mask_ip( $ip ) . $coname;
 
-				if ( $user_id && function_exists( 'get_userdata' ) ) {
-					$u = get_userdata( $user_id );
+				if ( $user_id ) {
+					$u = crb_get_userdata( $user_id );
 					$msg[] = __( 'User', 'wp-cerber' ) . ': ' . $u->display_name;
 					$msg_masked[] = __( 'User', 'wp-cerber' ) . ': ' . $u->display_name;
 				}

@@ -6,7 +6,7 @@
 	Author: Cerber Tech Inc.
 	Author URI: https://talk.wpcerber.com
 	Update URI: https://downloads.wpcerber.com/versions/wp-cerber.json
-	Version: 9.6.7.3
+	Version: 9.6.9
 	Requires PHP: 7.3
 	Requires at least: 5.8
 	Text Domain: wp-cerber
@@ -33,7 +33,7 @@
 
 */
 
-const CERBER_VER = '9.6.7.3';
+const CERBER_VER = '9.6.9';
 
 // Must be also updated in the header above
 const CERBER_REQ_PHP = '7.3';

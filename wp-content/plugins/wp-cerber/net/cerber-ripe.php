@@ -197,7 +197,7 @@ function ripe_readable_info( $ip ) {
 				$value = '<a href="mailto:' . $value . '">' . $value . '</a>';
 			}
 			elseif ( strtolower( $att['name'] ) == 'country' ) {
-				$value = cerber_get_flag_html( $value, '<b>' . cerber_country_name( $value ) . ' (' . $value . ')</b>' );
+				$value = crb_get_flag_html( $value, '<b>' . crb_get_country_name( $value ) . ' (' . $value . ')</b>' );
 				$ret['country'] = $value;
 			}
 

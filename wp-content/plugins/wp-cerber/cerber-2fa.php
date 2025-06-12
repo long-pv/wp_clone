@@ -2,7 +2,6 @@
 /*
 	Copyright (C) 2015-25 CERBER TECH INC., https://wpcerber.com
 
-
     Licenced under the GNU GPL.
 
     This program is free software; you can redistribute it and/or modify
@@ -790,7 +789,7 @@ final class CRB_2FA {
 				$ds[] = __( 'Hostname:', 'wp-cerber' ) . ' ' . @gethostbyaddr( cerber_get_remote_ip() );
 
 				if ( $c = lab_get_country( cerber_get_remote_ip(), false ) ) {
-					$ds[] = __( 'Location:', 'wp-cerber' ) . '' . cerber_country_name( $c ) . ' (' . $c . ')';
+					$ds[] = __( 'Location:', 'wp-cerber' ) . '' . crb_get_country_name( $c ) . ' (' . $c . ')';
 				}
 			}
 

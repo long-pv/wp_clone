@@ -144,7 +144,7 @@ function cerber_jetflow() {
 				$ret['abuse-mailbox'] = '';
 			}
 
-			$ret['country-name'] = cerber_country_name( $ret['country'] );
+			$ret['country-name'] = crb_get_country_name( $ret['country'] );
 
 			return $ret;
 		}

@@ -74,7 +74,7 @@ function cerber_settings_config( $args = array() ) {
 	// WP setting is: 'cerber-'.$screen_id
 	$screens = array(
 		'main'          => array( 'boot', 'liloa', 'stspec', 'proactive', 'custom', 'citadel', 'activity', 'prefs' ),
-		'users'         => array( 'us', 'us_reg', 'us_misc', 'pdata' ),
+		'users'         => array( 'us', 'us_reg', 'us_auth', 'us_misc', 'pdata' ),
 		'hardening'     => array( 'hwp', 'rapi' ),
 		'notifications' => array( 'notify', 'smtp', 'pushit', 'reports' ),
 		'traffic'       => array( 'tmain', 'tierrs', 'tlog' ),
@@ -222,14 +222,6 @@ function cerber_settings_config( $args = array() ) {
 						'enabler'     => array( 'nopasshint' ),
 						'requires_wp' => '5.5'
 					),
-					'nologinlang'     => array(
-						'title'         => __( 'Disable login language switcher', 'wp-cerber' ),
-						'type'          => 'checkbox',
-						'requires_wp'   => '5.9',
-						'requires_true' => function () {
-							return (bool) get_available_languages();
-						},
-					),
 				),
 			),
 			'custom'    => array(
@@ -263,19 +255,14 @@ function cerber_settings_config( $args = array() ) {
 						'label' => __( 'Disable automatic redirection to the login page when /wp-admin/ is requested by an unauthorized request', 'wp-cerber' ),
 						'type'  => 'checkbox',
 					),
-					'nonusers'   => array(
-						'title' => __( 'Non-existing users are strictly prohibited', 'wp-cerber' ),
-						'label' => __( 'Immediately block IP address when attempting to log in with a non-existing username', 'wp-cerber' ),
-						'type'  => 'checkbox',
-					),
 					'wplogin'    => array(
 						'title' => __( 'Requests to wp-login.php are strictly prohibited', 'wp-cerber' ),
 						'label' => __( 'Immediately block IP address after any request to wp-login.php', 'wp-cerber' ),
 						'type'  => 'checkbox',
 					),
 					'subnet'     => array(
-						'title' => __( 'Block subnet', 'wp-cerber' ),
-						'label' => __( 'Always block entire subnet Class C of intruders IP', 'wp-cerber' ),
+						'title' => __( 'Block the attacker\'s subnet', 'wp-cerber' ),
+						'label' => __( 'Block all IP addresses on the same Class C network as the detected attacker\'s IP address', 'wp-cerber' ),
 						'type'  => 'checkbox',
 					),
 				),
@@ -322,7 +309,7 @@ function cerber_settings_config( $args = array() ) {
 						},
 					),
 					'page404'          => array(
-						'title' => __( 'Access to prohibited locations', 'wp-cerber' ),
+						'title' => __( 'When attempting to access prohibited URLs', 'wp-cerber' ),
 						'type'  => 'select',
 						'set'   => array(
 							__( 'Use 404 template from the active theme', 'wp-cerber' ),
@@ -331,11 +318,12 @@ function cerber_settings_config( $args = array() ) {
 						)
 					),
 					'page404_redirect' => array(
-						'title'     => __( 'Redirection URL', 'wp-cerber' ),
-						'type'      => 'url',
-						'default'   => '',
-						'maxlength' => 1000,
-						'enabler'   => array( 'page404', 2 ),
+						'title'       => __( 'Redirection URL', 'wp-cerber' ),
+						'type'        => 'url',
+						'placeholder' => __( 'Full or relative URL to redirect request to', 'wp-cerber' ),
+						'default'     => '',
+						'maxlength'   => 1000,
+						'enabler'     => array( 'page404', 2 ),
 					),
 					'main_use_proxy'   => array(
 						'title'         => __( 'Use WordPress proxy settings', 'wp-cerber' ),
@@ -758,11 +746,11 @@ function cerber_settings_config( $args = array() ) {
 
 			'us_reg' => array(
 				'name'   => __( 'User registration', 'wp-cerber' ),
-				'desc'   => __( 'Restrict new user registrations by the following conditions', 'wp-cerber' ),
+				'desc'   => __( 'These rules control the user registration process. Use them to restrict who can register based on your security requirements and preferences.', 'wp-cerber' ),
 				'fields' => array(
 					'reglimit'     => array(
 						'title'          => __( 'Registration limit', 'wp-cerber' ),
-						'label'          => __( '%s registrations are allowed within %s minutes from one IP address', 'wp-cerber' ),
+						'label'          => __( '%s registrations are allowed from a single IP address within %s minutes', 'wp-cerber' ),
 						'setting_ids'    => array( 'reglimit_num', 'reglimit_min' ), // if defined, will be passed to input_renderer
 						'input_renderer' => function ( $label, $setting_ids, $value, $settings, $attrs, $name_prefix ) {
 							$s1 = $setting_ids[0];
@@ -778,8 +766,8 @@ function cerber_settings_config( $args = array() ) {
 						'type'  => 'select',
 						'set'   => array(
 							__( 'No restrictions', 'wp-cerber' ),
-							__( 'Deny all email addresses that match the following', 'wp-cerber' ),
-							__( 'Permit only email addresses that match the following', 'wp-cerber' ),
+							__( 'Block registration for email addresses matching the following', 'wp-cerber' ),
+							__( 'Allow registration only for email addresses matching the following', 'wp-cerber' ),
 						)
 					),
 					'emlist'       => array(
@@ -793,63 +781,53 @@ function cerber_settings_config( $args = array() ) {
 						'default'        => array(),
 						'enabler'        => array( 'emrule', '[1,2]' ),
 					),
+					'emlist_msg'   => array(
+						'title'   => __( 'User message', 'wp-cerber' ),
+						'label'   => __( "This optional message is shown if a user's email address is not allowed for registration", 'wp-cerber' ),
+						'type'    => 'textarea',
+						'enabler' => array( 'emrule', '[1,2]' ),
+					),
 					'regwhite'     => array(
-						'title' => __( 'Use White IP Access List', 'wp-cerber' ),
-						'label' => __( 'Only users from IP addresses in the White IP Access List may register on the website', 'wp-cerber' ),
+						'title' => __( 'Limit registration to trusted IP addresses only', 'wp-cerber' ),
+						'label' => __( 'Only users whose IP addresses are on the White IP Access List can register on the website', 'wp-cerber' ),
 						'type'  => 'checkbox',
 					),
 					'regwhite_msg' => array(
-						'title'       => __( 'User message', 'wp-cerber' ),
-						'placeholder' => __( "This message is displayed to a user if the IP address of the user's computer is not whitelisted", 'wp-cerber' ),
-						'type'        => 'textarea',
-						'enabler'     => array( 'regwhite' ),
+						'title'   => __( 'User message', 'wp-cerber' ),
+						'label'   => __( "This optional message is shown if a user's IP address is not on the White IP Access List", 'wp-cerber' ),
+						'type'    => 'textarea',
+						'enabler' => array( 'regwhite' ),
 					),
 				)
 			),
 
-			'us' => array(
-				'name'    => __( 'Authorized Access', 'wp-cerber' ),
-				'desc'    => __( 'Grant access to the website to logged-in users only', 'wp-cerber' ),
-				'doclink' => 'https://wpcerber.com/only-logged-in-wordpress-users/',
-				'fields'  => array(
-					'authonly'      => array(
-						'title'   => __( 'Authorized users only', 'wp-cerber' ),
-						'label'   => __( 'Only registered and logged in website users have access to the website', 'wp-cerber' ),
-						'type'    => 'checkbox',
-						'default' => 0,
-					),
-					'authonlyacl'   => array(
-						'title'   => __( 'Use White IP Access List', 'wp-cerber' ),
-						'label'   => __( 'Do not apply these policy to the IP addresses in the White IP Access List', 'wp-cerber' ),
-						'type'    => 'checkbox',
-						'default' => 0,
-						'enabler' => array( 'authonly' ),
-					),
-					'authonlymsg'   => array(
-						'title'       => __( 'User Message', 'wp-cerber' ),
-						'placeholder' => __( 'An optional login form message', 'wp-cerber' ),
-						'type'        => 'textarea',
-						'apply'       => 'strip_tags',
-						'enabler'     => array( 'authonly' ),
-					),
-					'authonlyredir' => array(
-						'title'       => __( 'Redirect to URL', 'wp-cerber' ),
-						//'label'       => __( 'if empty, visitors are redirected to the login page', 'wp-cerber' )
-						'placeholder' => 'https://',
-						'type'        => 'url',
-						'default'     => '',
-						'maxlength'   => 1000,
-						'enabler'     => array( 'authonly' ),
-					),
-				)
-			),
-
-			'us_misc' => array(
-				'name'   => __( 'Miscellaneous Settings', 'wp-cerber' ),
+			'us_auth' => array(
+				'name'   => __( 'User Authentication', 'wp-cerber' ),
+				'desc'   => __( 'These rules apply to the user login process. Use them to control how users sign in and to protect your website from unauthorized access.', 'wp-cerber' ),
 				'fields' => array(
+					/*'nonexisting_local' => array(
+						'title'        => __( 'When attempting to log in with non-existing username', 'wp-cerber' ),
+						'type'         => 'select',
+						'label'        => 'Take this action if the submitted username or email does not belong to any user',
+						'set'          => array(
+							0 => __( 'No specific action', 'wp-cerber' ),
+							1 => __( 'Abort user authentication and block remote IP address', 'wp-cerber' ),
+							2 => __( 'Abort user authentication', 'wp-cerber' ),
+						),
+						//'act_relation' => array(
+						//	array( false, array( 'filter_activity' => 51 ), __( 'Search in the log', 'wp-cerber' ) ),
+						//),
+						'upgrade_once' => 'nonusers'
+					),*/
+					'nonusers'   => array(
+						'title' => __( 'Non-existing users are strictly prohibited', 'wp-cerber' ),
+						'label' => __( 'Immediately block IP address when attempting to log in with a non-existing username', 'wp-cerber' ),
+						'type'  => 'checkbox',
+					),
 					'prohibited'    => array(
 						'title'          => __( 'Prohibited usernames', 'wp-cerber' ),
-						'label'          => __( 'Usernames from this list are not allowed to log in or register. Any IP address, have tried to use any of these usernames, will be immediately blocked. Use comma to separate logins.', 'wp-cerber' ) . ' ' . __( 'To specify a REGEX pattern wrap a pattern in two forward slashes.', 'wp-cerber' ),
+						//'label'          => __( 'Usernames from this list are not allowed to log in or register. Any IP address, have tried to use any of these usernames, will be immediately blocked. Use comma to separate logins.', 'wp-cerber' ) . ' ' . __( 'To specify a REGEX pattern wrap a pattern in two forward slashes.', 'wp-cerber' ),
+						'label'          => __( 'Usernames from this list are not allowed to log in or register. Use comma to separate usernames.', 'wp-cerber' ) . ' ' . __( 'To specify a REGEX pattern wrap a pattern in two forward slashes.', 'wp-cerber' ),
 						'type'           => 'textarea',
 						'list'           => true,
 						'delimiter'      => '/(?<!{\d),(?!\d*}.*?\/)/',
@@ -857,13 +835,12 @@ function cerber_settings_config( $args = array() ) {
 						'apply'          => 'strtolower',
 						'default'        => array(),
 					),
-					'app_pwd'       => array(
-						'title' => __( 'Application Passwords', 'wp-cerber' ),
+					'prohibited_rule' => array(
+						'title' => __( 'When attempting to log in with prohibited username', 'wp-cerber' ),
 						'type'  => 'select',
 						'set'   => array(
-							1 => __( 'Enabled, access to API using standard user passwords is allowed', 'wp-cerber' ),
-							2 => __( 'Enabled, no access to API using standard user passwords', 'wp-cerber' ),
-							3 => __( 'Disabled', 'wp-cerber' ),
+							0 => __( 'Abort user authentication and block remote IP address', 'wp-cerber' ),
+							1 => __( 'Abort user authentication', 'wp-cerber' ),
 						)
 					),
 					'auth_expire'   => array(
@@ -879,9 +856,72 @@ function cerber_settings_config( $args = array() ) {
 						'label' => __( 'Disable the "Remember Me" checkbox on the WordPress login form', 'wp-cerber' ),
 						'type'  => 'checkbox',
 					),
+					'app_pwd'       => array(
+						'title' => __( 'Application Passwords', 'wp-cerber' ),
+						'type'  => 'select',
+						'set'   => array(
+							1 => __( 'Enabled, access to API using standard user passwords is allowed', 'wp-cerber' ),
+							2 => __( 'Enabled, no access to API using standard user passwords', 'wp-cerber' ),
+							3 => __( 'Disabled', 'wp-cerber' ),
+						)
+					),
+				)
+			),
+
+			'us' => array(
+				'name'    => __( 'Limit Website Access', 'wp-cerber' ),
+				'desc'    => __( 'Hide your website from the public by allowing access only to logged-in users or trusted IP addresses. All other visitors will be redirected to the login page or a custom URL.', 'wp-cerber' ),
+				'doclink' => 'https://wpcerber.com/only-logged-in-wordpress-users/',
+				'fields'  => array(
+					'authonly'    => array(
+						'title'   => __( 'Allow access for logged-in users', 'wp-cerber' ),
+						'label'   => __( 'Only registered and logged-in users can access your website', 'wp-cerber' ),
+						'type'    => 'checkbox',
+						'default' => 0,
+					),
+					'authonlyacl' => array(
+						'title'   => __( 'Allow access from trusted IP addresses', 'wp-cerber' ),
+						'label'   => __( 'Let visitors from IP addresses in the White IP Access List access your website without logging in', 'wp-cerber' ),
+						'type'    => 'checkbox',
+						'default' => 0,
+						'enabler' => array( 'authonly' ),
+					),
+					'authonlymsg' => array(
+						'title'       => __( 'Login page message', 'wp-cerber' ),
+						'placeholder' => __( 'An optional login form message', 'wp-cerber' ),
+						'label'       => __( 'This message appears above the login form. Use it to explain why login is required or to give additional instructions to users.', 'wp-cerber' ),
+						'type'        => 'textarea',
+						'apply'       => 'strip_tags',
+						'enabler'     => array( 'authonly' ),
+					),
+					'authonlyredir' => array(
+						'title'       => __( 'Redirect unauthorized visitors to this URL', 'wp-cerber' ),
+						'label'       => __( 'Optional. Leave blank to show the message above instead of redirecting.', 'wp-cerber' ),
+						'placeholder' => 'https://',
+						'type'        => 'url',
+						'default'     => '',
+						'maxlength'   => 1000,
+						'enabler'     => array( 'authonly' ),
+					),
+				)
+			),
+
+			'us_misc' => array(
+				'name'   => __( 'Look and Layout', 'wp-cerber' ),
+				'desc'   => __( 'Customize how things appear in the login page and admin pages.', 'wp-cerber' ),
+				'fields' => array(
+					'nologinlang'   => array(
+						'title'         => __( 'Disable login language switcher', 'wp-cerber' ),
+						'label'         => __( 'Disable the login language switcher on the WordPress login page', 'wp-cerber' ),
+						'type'          => 'checkbox',
+						'requires_wp'   => '5.9',
+						'requires_true' => function () {
+							return (bool) get_available_languages();
+						},
+					),
 					'usersort'      => array(
-						'title' => __( 'Sort users in the Dashboard', 'wp-cerber' ),
-						'label' => __( 'Sort users in the Dashboard by date of registration', 'wp-cerber' ),
+						'title' => __( 'Sort users by registration date', 'wp-cerber' ),
+						'label' => __( 'On the Users admin page, display the most recently registered users first', 'wp-cerber' ),
 						'type'  => 'checkbox',
 					),
 				)
@@ -965,11 +1005,12 @@ function cerber_settings_config( $args = array() ) {
 							0 => __( 'Verbose', 'wp-cerber' )
 						),
 					),
-					'notify_above'              => array(
+					'notify_above' => array(
 						'title'          => __( 'Lockout notification', 'wp-cerber' ),
 						'field_switcher' => __( 'Send notification if the number of active lockouts above', 'wp-cerber' ),
 						'label'          => crb_test_notify_link( array( 'channel' => 'email' ) ),
 						'type'           => 'digits',
+						'upgrade_delete' => 'above',
 					),
 					'notify-new-ver'            => array(
 						'title' => __( 'New version of WP Cerber is available', 'wp-cerber' ),
@@ -1510,12 +1551,7 @@ function cerber_settings_config( $args = array() ) {
 						'label' => __( 'Change file and directory permissions if it is required to delete files', 'wp-cerber' ),
 						'type'  => 'checkbox',
 					),
-					'scan_debug'    => array(
-						'title'    => __( 'Enable diagnostic logging', 'wp-cerber' ),
-						'label'    => sprintf( __( 'Once enabled, the log is available here: %s', 'wp-cerber' ), ' <a target="_blank" href="' . cerber_admin_link( 'diag-log' ) . '">' . __( 'Diagnostic Log', 'wp-cerber' ) . '</a>' ),
-						'type'     => 'checkbox',
-						'diag_log' => 'Logging of the scan operations',
-					),
+					'scan_debug'    => crb_get_field_template( 'diagnostic_log', [ 'diag_log' => 'Logging of integrity scan operations' ] ),
 					'scan_qcleanup' => array(
 						'title'   => __( 'Delete quarantined files after', 'wp-cerber' ),
 						'type'    => 'digits',
@@ -1935,15 +1971,10 @@ function cerber_settings_config( $args = array() ) {
 						'title' => __( 'Use master timezone', 'wp-cerber' ),
 						'type'  => 'checkbox',
 					),*/
-					'master_diag'      => array(
-						'title'    => __( 'Enable diagnostic logging', 'wp-cerber' ),
-						'label'    => sprintf( __( 'Once enabled, the log is available here: %s', 'wp-cerber' ), ' <a target="_blank" href="' . cerber_admin_link( 'diag-log' ) . '">' . __( 'Diagnostic Log', 'wp-cerber' ) . '</a>' ),
-						'type'     => 'checkbox',
-						'diag_log' => 'Logging of the main website operations',
-					),
+					'master_diag' => crb_get_field_template( 'diagnostic_log', [ 'diag_log' => 'Logging of Cerber.Hub main website operations' ] ),
 				)
 			),
-			'slave_settings'  => array(
+			'slave_settings' => array(
 				'name'   => '',
 				//'info'   => __( 'User related settings', 'wp-cerber' ),
 				'fields' => array(
@@ -1963,13 +1994,7 @@ function cerber_settings_config( $args = array() ) {
 						'label_pos' => 'below',
 						'default'   => 2,
 					),
-					'slave_diag'   => array(
-						'title'    => __( 'Enable diagnostic logging', 'wp-cerber' ),
-						'label'    => sprintf( __( 'Once enabled, the log is available here: %s', 'wp-cerber' ), ' <a target="_blank" href="' . cerber_admin_link( 'diag-log' ) . '">' . __( 'Diagnostic Log', 'wp-cerber' ) . '</a>' ),
-						'default'  => 0,
-						'type'     => 'checkbox',
-						'diag_log' => 'Logging of the operations initiated by the main website',
-					),
+					'slave_diag'   => crb_get_field_template( 'diagnostic_log', [ 'diag_log' => 'Logging of operations initiated by the Cerber.Hub main website' ] ),
 				)
 			)
 		);
@@ -2025,6 +2050,48 @@ function cerber_settings_config( $args = array() ) {
 	return $sections;
 }
 
+/**
+ * Return a setting field template
+ *
+ * @param string $type Field type
+ *
+ * @return array Setting field configuration
+ *
+ * @since 9.6.7.5
+ */
+function crb_get_field_template( string $type, array $arg = array() ): array {
+	$ret = array();
+
+	switch ( $type ) {
+		case 'diagnostic_log':
+			$ret = array(
+				'title'    => __( 'Enable diagnostic logging', 'wp-cerber' ),
+				'label'    => sprintf( __( 'Once enabled, the log is available here: %s', 'wp-cerber' ), ' <a target="_blank" href="' . cerber_admin_link( 'diag-log' ) . '">' . __( 'Diagnostic Log', 'wp-cerber' ) . '</a>' ),
+				'type'     => 'checkbox',
+				'diag_log' => 'Module not specified', // Placeholder
+				'rollback' => function ( $new ) {
+					if ( ! $new ) {
+						return false;
+					}
+
+					$check = cerber_get_the_folder( true );
+					if ( crb_is_wp_error( $check ) ) {
+						cerber_admin_notice( $check->get_error_message() );
+
+						return true;
+					}
+
+					return false;
+				},
+			);
+	}
+
+	if ( $arg ) {
+		$ret = array_merge( $ret, $arg );
+	}
+
+	return $ret;
+}
 function crb_settings_processor() {
 
 	if ( ! cerber_is_admin_page()
@@ -2065,29 +2132,34 @@ function cerber_wp_settings_setup( $screen_id, $sections = array() ) {
 	$option = 'cerber-' . $screen_id;
 	register_setting( 'cerberus-' . $screen_id, $option );
 
-	global $tmp;
 	foreach ( $sections as $section_id => $section_config ) {
 
-		$desc = crb_array_get( $section_config, 'desc' );
+		$deck_items = [];
+		$deck_items[] = '<div>' . crb_generic_escape( crb_array_get( $section_config, 'desc' ) ) . '</div>';
 
-		if ( $links = crb_array_get( $section_config, 'seclinks' ) ) {
-			foreach ( $links as $link ) {
-				$desc .= '<span class="crb-insetting-link">[ <a target="_blank" href="' . $link[1] . '">' . $link[0] . '</a> ]</span>';
-			}
+		$all_links = array_merge(
+			crb_array_get( $section_config, 'seclinks', [] ),
+			crb_array_get( $section_config, 'doclink' ) ? [ [ __( 'Documentation', 'wp-cerber' ), $section_config['doclink'] ] ] : []
+		);
+
+		foreach ( $all_links as $link ) {
+			$deck_items[] = sprintf(
+				'<div class="crb-insetting-link">[ <a target="_blank" href="%s">%s</a> ]</div>',
+				crb_escape_url( $link[1] ),
+				esc_html( $link[0] )
+			);
 		}
 
-		if ( $doclink = crb_array_get( $section_config, 'doclink' ) ) {
-			$desc .= '<span class="crb-insetting-link">[ <a class="" target="_blank" href="' . $doclink . '">' . __( 'Documentation', 'wp-cerber' ) . '</a> ]</span>';
-		}
+		$section_deck = '<div class="crb-setting-section-deck">' . implode( "\n", $deck_items ) . '</div>';
 
-		$tmp[ $section_id ] = '<span class="crb-section-desc">' . $desc . '</span>';
-
-		add_settings_section( $section_id, crb_array_get( $section_config, 'name', '' ), function ( $sec ) {
-			global $tmp;
-			if ( $tmp[ $sec['id'] ] ) {
-				echo $tmp[ $sec['id'] ];
-			}
-		}, $option );
+		add_settings_section(
+			$section_id,
+			crb_array_get( $section_config, 'name', '' ),
+			function () use ( $section_deck ) {
+				echo $section_deck;
+			},
+			$option
+		);
 
 		foreach ( $section_config['fields'] as $field => $config ) {
 
@@ -2102,7 +2174,7 @@ function cerber_wp_settings_setup( $screen_id, $sections = array() ) {
 				continue;
 			}
 
-			if ( in_array( $field, CRB_PRO_SETTINGS ) && ! lab_lab() ) {
+			if ( array_key_exists( $field, CRB_PRO_SETTINGS ) && ! lab_lab() ) {
 				continue;
 			}
 
@@ -2522,9 +2594,12 @@ function cerber_field_show( $config ) {
 
 	if ( $loh = $config['act_relation'] ?? false ) {
 		foreach ( $loh as $item ) {
-			if ( in_array( $value, $item[0] ) ) {
-				$html .= '<span class="crb-insetting-link">[ <a href="' . cerber_admin_link( 'activity', $item[1] ) . '" target="_blank">' . $item[2] . '</a> ]</span>';
+			if ( $item[0]
+                 && ! in_array( $value, $item[0] ) ) {
+				continue;
 			}
+
+            $html .= '<span class="crb-insetting-link">[ <a href="' . cerber_admin_link( 'activity', $item[1] ) . '" target="_blank">' . $item[2] . '</a> ]</span>';
 		}
 	}
 
@@ -3061,37 +3136,80 @@ function cerber_process_settings_form() {
 }
 
 /**
+ * Fully deletes specified settings stored in the DB.
+ *
+ * @param string[] $delete_list Setting IDs to delete
+ *
+ * @return string[] Deleted setting IDs
+ *
+ * @since 9.6.7.5
+ */
+function cerber_settings_delete( array $delete_list ) {
+
+	if ( ( ! $all_settings = get_site_option( CERBER_CONFIG ) )
+	     || ! is_array( $all_settings ) ) {
+		return array();
+	}
+
+	$deleted = array();
+	$protected = crb_get_settings_fields();
+	$protected [ CRB_ADDON_STS ] = 1;
+	$protected [ CRB_ROLE_STS ] = 1;
+
+	foreach ( $delete_list as $id ) {
+		if ( ! isset( $all_settings[ $id ] )
+		     || isset( $protected[ $id ] ) ) {
+			continue;
+		}
+
+		unset( $all_settings[ $id ] );
+		$deleted[] = $id;
+	}
+
+	if ( $deleted
+	     && update_site_option( CERBER_CONFIG, $all_settings ) ) {
+		return $deleted;
+	}
+
+	return array();
+}
+
+/**
  * Updates WP Cerber's settings in the database in the new format
  *
  * @param array $new_settings Array of settings (id => value) to update
  * @param string $sanitizing_group Settings group (setting form)
  *
+ * @return bool
+ *
  * @since 9.3.4
  */
-function cerber_settings_update( $new_settings, $sanitizing_group = '' ) {
+function cerber_settings_update( array $new_settings, string $sanitizing_group = '' ) {
 
-	if ( ( ! $old_settings = get_site_option( CERBER_CONFIG ) )
-	     || ! is_array( $old_settings ) ) {
-		$old_settings = array();
+	if ( ( ! $stored_settings = get_site_option( CERBER_CONFIG ) )
+	     || ! is_array( $stored_settings ) ) {
+		$stored_settings = array();
 	}
 
-    // Ensure that all settings keys are in place in $old_settings
+    // Ensure that all settings keys are in place in $stored_settings
 
 	$all_settings = array_fill_keys( array_keys( crb_get_default_values() ), '' );
-	$old_settings = array_merge( $all_settings, $old_settings );
+	$stored_settings = array_merge( $all_settings, $stored_settings );
 
     // Preserve PRO settings if the license is expired
 
 	if ( ! lab_lab()
-	     && $pro = array_intersect_key( $new_settings, array_flip( CRB_PRO_SETTINGS ) ) ) {
-		$new_settings = array_merge( $new_settings, array_intersect_key( $old_settings, $pro ) );
+	     && $preserve = array_intersect_key( $new_settings, CRB_PRO_SETTINGS ) ) {
+		$new_settings = array_merge( $new_settings, array_intersect_key( $stored_settings, $preserve ) );
 	}
 
 	// Pre-process in the old way @before 9.3.4
 
-	$new_settings = cerber_settings_pre_update( $old_settings, $new_settings, $sanitizing_group );
+	$new_settings = cerber_settings_pre_update( $stored_settings, $new_settings, $sanitizing_group );
 
-	$save = array_merge( $old_settings, $new_settings );
+    // Merge existing settings and new ones
+
+	$save = array_merge( $stored_settings, $new_settings );
 
     // Pre-process in the new way @since 9.3.4
 
@@ -3103,7 +3221,7 @@ function cerber_settings_update( $new_settings, $sanitizing_group = '' ) {
         if ( ( $pre_update = crb_array_get( $config, 'pre_update' ) )
 		     && is_callable( $pre_update ) ) {
 
-	        $save[ $id ] = call_user_func_array( $pre_update, array( $save[ $id ], $old_settings[ $id ], &$save, $old_settings, $new_settings ) );
+	        $save[ $id ] = call_user_func_array( $pre_update, array( $save[ $id ], $stored_settings[ $id ], &$save, $stored_settings, $new_settings ) );
 		}
 	}
 
@@ -3113,16 +3231,11 @@ function cerber_settings_update( $new_settings, $sanitizing_group = '' ) {
 
 	foreach ( $save as $key => $val ) {
 
-		if ( ! isset( $old_settings[ $key ] ) ) {
-			/*if ( ! empty( $val ) ) {
-                // Absence of the old setting is equal to a new, empty one
-                $changed[] = $key;
-			}*/
-
+		if ( ! isset( $stored_settings[ $key ] ) ) {
 			continue;
 		}
 
-		$old = $old_settings[ $key ];
+		$old = $stored_settings[ $key ];
 
 		// We compare only non-empty values, for WP Cerber settings '', 0, false, and empty array are equal
 
@@ -3151,7 +3264,7 @@ function cerber_settings_update( $new_settings, $sanitizing_group = '' ) {
 
     // We are ready to save settings
 
-    $result = null;
+    $result = false;
 
 	if ( ! $equal ) {
 		if ( ! $result = update_site_option( CERBER_CONFIG, $save ) ) {
@@ -3182,7 +3295,7 @@ function cerber_settings_update( $new_settings, $sanitizing_group = '' ) {
 			if ( ( $on_change = crb_array_get( $config, 'on_change' ) )
 			     && is_callable( $on_change ) ) {
 
-				call_user_func( $on_change, $save[ $id ], $save, $old_settings );
+				call_user_func( $on_change, $save[ $id ], $save, $stored_settings );
 			}
 
 			// Rolling back value if a rollback returns true
@@ -3190,8 +3303,8 @@ function cerber_settings_update( $new_settings, $sanitizing_group = '' ) {
 			if ( ( $rollback = crb_array_get( $config, 'rollback' ) )
 			     && is_callable( $rollback ) ) {
 
-				if ( call_user_func( $rollback, $save, $old_settings ) ) {
-					$back[ $id ] = crb_array_get( $old_settings, $id, '' );
+				if ( call_user_func( $rollback, $save[ $id ], $save, $stored_settings ) ) {
+					$back[ $id ] = crb_array_get( $stored_settings, $id, '' );
 				}
 			}
 		}
@@ -3213,12 +3326,12 @@ function cerber_settings_update( $new_settings, $sanitizing_group = '' ) {
 	}
 
 	$data = array(
-		'group'      => (string) $sanitizing_group,
+		'group'      => $sanitizing_group,
 		'equal'      => $equal,
 		'result'     => $result,
 		'changed'    => $changed,
 		'new_values' => $new_settings,
-		'old_values' => $old_settings,
+		'old_values' => $stored_settings,
 	);
 
 	if ( $result && $changed && $diag_log ) {
@@ -3454,7 +3567,7 @@ function crb_journaling( $data, $list ) {
  *
  * @since 9.1.5
  */
-function crb_get_settings_fields( $screen_id = '' ) {
+function crb_get_settings_fields( $screen_id = '' ): array {
     static $all;
 
 	if ( ! $screen_id ) {

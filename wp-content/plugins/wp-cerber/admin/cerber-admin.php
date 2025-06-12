@@ -516,7 +516,7 @@ add_action( 'wp_ajax_cerber_ref_upload', function () {
 
 		// Step 1, saving file
 
-		if ( ! is_uploaded_file( $_FILES['refile']['tmp_name'] ) ) {
+        if ( ! is_uploaded_file( $_FILES['refile']['tmp_name'] ) ) {
 			$error = 'Unable to read uploaded file';
 		}
 

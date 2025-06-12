@@ -788,7 +788,7 @@ function crb_settings_update_role_policies( $post ) {
 		crb_sanitize_deep( $element );
 	} );
 
-	if ( cerber_settings_update( array( 'crb_role_policies' => $policies ) ) ) {
+	if ( cerber_settings_update( array( CRB_ROLE_STS => $policies ) ) ) {
 		cerber_admin_message( __( 'Policies have been updated', 'wp-cerber' ) );
 	}
 }
@@ -1299,7 +1299,7 @@ class CRB_Sessions_Table extends WP_List_Table {
 				$uname = '';
 
 				if ( $user_id = crb_get_query_params( 'filter_user', '\d+' ) ) {
-					if ( $u = get_userdata( $user_id ) ) {
+					if ( $u = crb_get_userdata( $user_id ) ) {
 						$uname = crb_format_user_name( $u );
 					}
 					else {
@@ -1386,7 +1386,7 @@ class CRB_Sessions_Table extends WP_List_Table {
 	}
 
 	public function single_row( $item ) {
-		//$item['user_data'] = get_userdata( $item['user_id'] );
+		//$item['user_data'] = crb_get_userdata( $item['user_id'] );
 		parent::single_row( $item );
 	}
 

@@ -190,11 +190,25 @@
     margin-top: 1.2em;
     color: #101010;
 }
+
 .crb-settings .form-table {
     margin-bottom: 3em;
 }
 .crb-settings .form-table:last-of-type {
     margin-bottom: 0;
+}
+
+.crb-setting-section-deck {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    /*gap: 1em;*/
+}
+
+.crb-setting-section-deck > :first-child {
+    max-width: 80%;
+    /*padding-right: 1em;*/
 }
 
 .crb-setting-row th,
@@ -2304,6 +2318,35 @@ div#crb-whois-data:hover {
 .crb-raw-data pre {
     line-height: initial;
     white-space: pre-wrap; /* css-3 */
+}
+
+
+.crb-rdap-container {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 2em;
+}
+
+.crb-rdap-column {
+    flex: 1 1 0;
+}
+
+.crb-rdap-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.crb-rdap-table td {
+    vertical-align: top;
+    padding: 0.4em 0.6em;
+    border-bottom: 1px solid #ccc;
+}
+
+.crb-rdap-table td:first-child {
+    font-weight: bold;
+    white-space: nowrap;
+    width: 25%;
 }
 
 #crb-user-extra-info a {

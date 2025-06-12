@@ -255,7 +255,7 @@ function cerber_admin_link_add( $args = array(), $preserve = false, $add_nonce =
 	$params = array_merge( $params, $args );
 	$link = cerber_admin_link( '', $params, $add_nonce );
 
-	return esc_url( $link );
+	return crb_escape_url( $link );
 }
 
 /**
@@ -1430,34 +1430,79 @@ function crb_escape( $val ) {
 	return _wp_specialchars( $val, ENT_QUOTES );
 }
 
-
 /**
- * Safely escapes a URL string to prevent XSS attacks.
+ * Safely escapes a URL for use in HTML attributes like "href" and "src" to prevent XSS attacks
  *
- * @param string $url The URL to escape.
- * @return string The safely escaped URL or empty string otherwise
+ * Filters out invalid and dangerous URLs (e.g., javascript:, data:) and strips unsafe characters.
+ * Allows only a specific set of safe protocols.
+ *
+ * @param string $url The URL to process.
+ *
+ * @return string The fully escaped and safe URL or '#INVALID URL#' string otherwise.
  */
-function crb_escape_url( $url = '' ) {
+function crb_escape_url( string $url = '' ): string {
 
 	$url = trim( $url );
 
+	if ( ! $url ) {
+		return '';
+	}
+
+	// Normalize ampersands
+	$url = trim( str_ireplace( '&amp;', '&', $url ) );
+
+	// Basic sanitation: remove illegal characters
 	if ( ! $clean_url = filter_var( $url, FILTER_SANITIZE_URL ) ) {
 		return '#INVALID URL#';
 	}
 
+	// Validate as full URL (must include scheme and host)
 	if ( ! $clean_url = filter_var( $clean_url, FILTER_VALIDATE_URL ) ) {
 		return '#INVALID URL#';
 	}
 
-	// Protect from using data:, javascript: , file and so on
+	// Avoid invalid type - in some occasion filter_var() can return non-string
+	if ( ! is_string( $clean_url ) ) {
+		return '#INVALID URL#';
+	}
 
+	// Allow only specific safe protocols
+	// Protect from using data:, javascript: , file and so on
 	if ( ! preg_match( '/^(https?|mailto|ftps?):/i', $clean_url ) ) {
 		return '#INVALID URL#';
 	}
 
-	return str_replace( array( '"', "'", '<', '>', '`' ), '', $clean_url );
+	// Remove high-risk characters: quotes, angle brackets, backticks
+	$clean_url = str_replace( array( '"', "'", '<', '>', '`' ), '', $clean_url );
+
+	return htmlspecialchars( $clean_url, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 }
 
+/**
+ * Validates and safely escapes an email address for use in "mailto:" href attributes.
+ *
+ * @param string $email The input email address.
+ *
+ * @return string Escaped and validated email address, or empty string if invalid.
+ *
+ * @since 9.6.9
+ */
+function crb_escape_email( string $email = '' ): string {
+
+	$email = trim( $email );
+
+	if ( ! $email ) {
+		return '';
+	}
+
+	// Basic email validation
+	if ( ! filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
+		return '';
+	}
+
+	// Final output-escape for insertion into HTML attribute
+	return htmlspecialchars( $email, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+}
 
 /**
  * Escapes single quotes, `"`, `<`, `>`, `&`, and fixes line endings.
@@ -1654,19 +1699,20 @@ function cerber_is_wp_ajax( $use_filter = false ) {
  *
  * @since 9.0.4
  */
-function crb_is_wp_error( $thing, $add_issue = false, $issue_section = '' ) {
-	$ret = false;
-
+function crb_is_wp_error( $thing, bool $add_issue = false, string $issue_section = '' ): bool {
 	if ( $thing instanceof WP_Error ) {
-
-		$ret = true;
-
 		if ( $add_issue ) {
-			cerber_add_issue( $thing->get_error_code(), $thing->get_error_message(), array( 'section' => $issue_section ) );
+			cerber_add_issue(
+				$thing->get_error_code(),
+				$thing->get_error_message(),
+				[ 'section' => $issue_section ]
+			);
 		}
+
+		return true;
 	}
 
-	return $ret;
+	return false;
 }
 
 /**
@@ -2800,7 +2846,7 @@ function cerber_auto_date( $time, $purify = true ): string {
  *
  * @return string
  */
-function cerber_date( $timestamp, $purify = true ) {
+function cerber_date( $timestamp, $purify = true ): string {
 	static $gmt_offset;
 
 	if ( $gmt_offset === null ) {
@@ -2824,7 +2870,7 @@ function cerber_date( $timestamp, $purify = true ) {
 		$date = str_replace( array( ',', ' am', ' pm', ' AM', ' PM' ), array( ',<wbr>', '&nbsp;am', '&nbsp;pm', '&nbsp;AM', '&nbsp;PM' ), $date );
 	}
 
-	return $date;
+	return (string) $date;
 }
 
 function cerber_get_dt_format() {
@@ -2912,6 +2958,9 @@ function crb_size_format( $fsize ) {
  * @return false|WP_User
  */
 function cerber_get_user( $login_email ) {
+
+	crb_load_dependencies( 'get_user_by' );
+
 	if ( is_email( $login_email ) ) {
 		return get_user_by( 'email', $login_email );
 	}
@@ -2920,6 +2969,8 @@ function cerber_get_user( $login_email ) {
 }
 
 /**
+ * Retrieves user info by user ID
+ *
  * @param int $user_id
  *
  * @return false|WP_User
@@ -2934,6 +2985,9 @@ function crb_get_userdata( $user_id ) {
 	}
 
 	if ( ! isset( $users[ $user_id ] ) ) {
+
+		crb_load_dependencies( 'get_user_by' );
+
 		$users[ $user_id ] = get_user_by( 'id', $user_id );
 	}
 
@@ -4202,22 +4256,46 @@ function cerber_htaccess_sync( $file, $settings = array() ) {
 
 		if ( ! empty( $settings['phpnoupl'] ) ) {
 
-			$rules [] = '<Files *>';
-			$rules [] = 'SetHandler none';
-			$rules [] = 'SetHandler default-handler';
-			$rules [] = 'Options -ExecCGI';
-			$rules [] = 'RemoveHandler .cgi .php .php3 .php4 .php5 .php7 .php8 .phtml .pl .py .pyc .pyo';
-			$rules [] = '</Files>';
+			$rules = [
+				'<IfModule mod_authz_core.c>',
+				'<FilesMatch "\\.(php|phtml|php[3-8]?|phar|cgi|pl|py|pyc|pyo|sh)$">',
+				'    SetHandler none',
+				'    Require all denied',
+				'</FilesMatch>',
+				'</IfModule>',
+				'',
+				'<IfModule !mod_authz_core.c>',
+				'<FilesMatch "\\.(php|phtml|php[3-8]?|phar|cgi|pl|py|pyc|pyo|sh)$">',
+				'    SetHandler none',
+				'    Order allow,deny',
+				'    Deny from all',
+				'</FilesMatch>',
+				'</IfModule>',
+				'',
+				'<FilesMatch "\\.(php|phtml|php[3-8]?|phar|cgi|pl|py|pyc|pyo|sh)$">',
+				'    <IfModule mod_php.c>',
+				'        php_flag engine off',
+				'    </IfModule>',
+				'    <IfModule mod_php5.c>',
+				'        php_flag engine off',
+				'    </IfModule>',
+				'    <IfModule mod_php7.c>',
+				'        php_flag engine off',
+				'    </IfModule>',
+				'    <IfModule mod_php8.c>',
+				'        php_flag engine off',
+				'    </IfModule>',
+				'</FilesMatch>',
+				'',
+				'<IfModule mod_mime.c>',
+				'    RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar .cgi .pl .py .pyc .pyo .sh',
+				'</IfModule>',
+				'',
+				'<IfModule mod_cgi.c>',
+				'    Options -ExecCGI',
+				'</IfModule>',
+			];
 
-			$rules [] = '<IfModule mod_php.c>'; // PHP 8
-			$rules [] = 'php_flag engine off';
-			$rules [] = '</IfModule>';
-			$rules [] = '<IfModule mod_php7.c>';
-			$rules [] = 'php_flag engine off';
-			$rules [] = '</IfModule>';
-			$rules [] = '<IfModule mod_php5.c>';
-			$rules [] = 'php_flag engine off';
-			$rules [] = '</IfModule>';
 		}
 
 		return cerber_update_htaccess( $file, $rules );
@@ -5356,7 +5434,7 @@ function crb_auto_decode( &$text ) {
  *
  */
 function crb_unserialize( &$string ) {
-	return @unserialize( $string, [ 'allowed_classes' => false ] ); // Requires PHP 7
+	return @unserialize( $string, [ 'allowed_classes' => false ] );
 }
 
 function crb_get_review_url( $vendor = null ) {
@@ -5850,6 +5928,7 @@ add_filter( 'auto_update_plugin', function ( $update, $item ) {
 	// $update = apply_filters( "auto_update_{$type}", $update, $item );
 
 	if ( crb_get_settings( 'cerber_sw_auto' )
+	     && isset( $item->plugin )
 	     && $item->plugin == CERBER_PLUGIN_ID ) {
 		return true;
 	}
@@ -6050,6 +6129,8 @@ function crb_load_dependencies( $func, $load_cons = false ) {
 		case 'wp_create_nonce':
 		case 'is_user_logged_in':
 		case 'wp_get_current_user':
+		case 'get_userdata':
+		case 'get_user_by':
 			require_once( ABSPATH . WPINC . '/pluggable.php' );
 			break;
 		case 'wp_is_auto_update_enabled_for_type':

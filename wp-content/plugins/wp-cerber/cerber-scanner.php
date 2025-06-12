@@ -4624,7 +4624,7 @@ function crb_hash_maker( $zip_file, $zip_folder, $delete = true, $expires = 0 ) 
 	}
 
 	if ( $err ) {
-		return new WP_Error( 'cerber-file', sprintf( __( 'Error: file %s cannot be used.', 'wp-cerber' ), '<b>' . cerber_mb_basename( $zip_file ) . '</b>' ) . ' ' . $err . ' ' . __( 'Please upload another file.', 'wp-cerber' ) );
+		return new WP_Error( 'cerber-file', sprintf( __( 'The file you have uploaded (%s) cannot be used.', 'wp-cerber' ), '<b>' . cerber_mb_basename( $zip_file ) . '</b>' ) . ' ' . $err . ' ' . __( 'Please upload another file.', 'wp-cerber' ) );
 	}
 
 	$dir = $obj['src'] . DIRECTORY_SEPARATOR;
@@ -4721,27 +4721,22 @@ function cerber_get_tmp_file_folder() {
  *
  * @return string|bool|WP_Error  Full path to the folder with trailing slash
  */
-function cerber_get_the_folder( $asis = false ) {
-	$ret = cerber_get_my_folder();
+function cerber_get_the_folder( $return_as_is = false ) {
+	$folder = cerber_get_my_folder();
 
 	cerber_remove_issues( __FUNCTION__ );
 
-	if ( crb_is_wp_error( $ret, true, __FUNCTION__ ) ) {
-		crb_scan_debug( $ret );
-		if ( $asis ) {
-			return $ret;
-		}
-
-		return false;
+	if ( crb_is_wp_error( $folder, true, __FUNCTION__ ) ) {
+		return $return_as_is ? $folder : false;
 	}
 
-	return $ret;
+	return $folder;
 }
 
 /**
  * Return Cerber's folder. If there is no folder, creates it.
  *
- * @return string|WP_Error  Full path to the folder with trailing slash
+ * @return string|WP_Error Full path to the folder with trailing slash
  */
 function cerber_get_my_folder() {
     static $ret;
@@ -4763,7 +4758,7 @@ function cerber_get_my_folder() {
 
 		$path = realpath( $user_defined );
 
-		crb_check_dir( $path, $error, 'Directory defined with the constant CERBER_FOLDER_PATH does not exists or is not within the allowed paths: ' . crb_escape( $user_defined ) );
+		crb_check_dir( $path, $error, 'Directory defined by the constant CERBER_FOLDER_PATH does not exist or is outside allowed paths: ' . crb_escape( $user_defined ) );
 
 		if ( $error ) {
 			return new WP_Error( 'cerber-dir', $error );
@@ -5740,7 +5735,9 @@ function cerber_get_new_issues( $list_a, $list_b ) {
 			if ( ! empty( $b_issue[1] ) ) {
 				$found = 0;
 				foreach ( $list_a[ $key ]['issues'] as $a_issue ) {
-					if ( $a_issue['data']['name'] == $b_issue['data']['name'] ) {
+					if ( isset( $a_issue['data'], $a_issue['data']['name'], $b_issue['data'], $b_issue['data']['name'] )
+					     && $a_issue['data']['name'] == $b_issue['data']['name'] ) {
+
 						$found = 1;
 						break;
 					}

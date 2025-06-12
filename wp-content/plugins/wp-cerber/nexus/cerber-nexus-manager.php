@@ -689,7 +689,7 @@ function nexus_add_client( $token ) {
 	$data['x_field']          = $t[2];
 	$data['x_num']            = $t[3];
 	// These are shown in the dashboard, make them safe
-	$data['site_url']         = substr( esc_url( $url ), 0, 250 );
+	$data['site_url']         = substr( crb_escape_url( $url ), 0, 250 );
 	$data['site_name']        = mb_substr( crb_generic_escape( htmlspecialchars_decode( $t[6] ) ), 0, 250 );
 	$data['site_name_remote'] = $data['site_name'];
 
@@ -1593,7 +1593,7 @@ function nexus_refresh_client_servers( $client_id ) {
 	}
 
 	if ( $srv_country && ! isset( $list[ $srv_country ] ) ) {
-		$list[ $srv_country ] = cerber_country_name( $srv_country );
+		$list[ $srv_country ] = crb_get_country_name( $srv_country );
 		cerber_update_set( 'nexus_countries', $list );
 	}
 

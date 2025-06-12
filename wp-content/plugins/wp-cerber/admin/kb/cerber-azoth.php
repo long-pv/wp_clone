@@ -241,7 +241,7 @@ final class CRB_Explainer {
 			// Documentation links
 
 			if ( $link = $kb_entry['doc_link'] ?? '' ) {
-				$link = esc_url( $link );
+				$link = crb_escape_url( $link );
 				$expl['kb_link'] = array( array( crb_get_icon( 'know_more' ) . '<a href="' . $link . '" target="_blank">' . $link . '</a>' ) );
 			}
 
@@ -296,7 +296,7 @@ final class CRB_Explainer {
 		}
 
 		if ( $kb['kb_url'] ) {
-			$doc_link = esc_url( $kb['kb_url'] );
+			$doc_link = crb_escape_url( $kb['kb_url'] );
 		}
 		else {
 			$doc_link = '';
@@ -561,7 +561,7 @@ final class CRB_Wisdom {
 	 *
 	 * @since 9.6.1.3
 	 */
-	static function determine_locale( $user_id = 0 ) {
+	static function determine_locale( $user_id = 0 ): string {
 		static $user_locale;
 
 		if ( ! $user_locale ) {

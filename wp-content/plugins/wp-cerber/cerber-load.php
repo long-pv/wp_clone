@@ -123,11 +123,28 @@ const CRB_TRF_PARAMS = array(
 );
 
 const CRB_ACT_HASH = 'activity_table_hash';
+const CRB_ERROR_LOG = 'cerber-errors.log';
+
+spl_autoload_register( function ( $class_name ) {
+	static $classes = [
+		'CRB_Net'         => '/net/cerber-net.php',
+		'CRB_RDAP_Client' => '/net/cerber-rdap.php'
+	];
+
+	if ( $file = $classes[ $class_name ] ?? '' ) {
+		require_once( __DIR__ . $file );
+
+		return;
+	}
+
+	// Unknown class or a file doesn't exist - should be logged?
+
+} );
 
 require_once( __DIR__ . '/cerber-pluggable.php' );
 require_once( __DIR__ . '/cerber-common.php' );
+require_once( __DIR__ . '/includes/cerber-geo.php' );
 require_once( __DIR__ . '/cerber-codex.php' );
-require_once( __DIR__ . '/net/cerber-net.php' );
 require_once( __DIR__ . '/cerber-settings.php' );
 include_once( __DIR__ . '/cerber-request.php' );
 include_once( __DIR__ . '/cerber-activity.php' );
@@ -1123,16 +1140,6 @@ add_filter( 'authenticate', function ( $user, $username, $password ) {
  */
 function cerber_authenticate( $user, $username, $password = '' ) {
 
-	if ( is_wp_error( $user ) ) {
-		// This allows a previous third-party filter on the 'authenticate' hook to determine
-		// that the user must be blocked from logging in. Since WP Cerber 9.6.6.
-
-		CRB_Globals::$act_status = 55;
-		cerber_log( CRB_EV_LDN, $username );
-
-		return $user;
-	}
-
 	if ( $username
          && ( crb_get_settings( 'loginnowp' ) == 2 )
 	     && ! crb_acl_is_white()
@@ -1159,10 +1166,12 @@ function cerber_authenticate( $user, $username, $password = '' ) {
          && crb_is_username_prohibited( $username ) ) {
 
 		CRB_Globals::set_ctrl_setting( 'prohibited' );
-		$ret = crb_login_error( $username, 52 );
-		cerber_block_add( null, 704, $username );
 
-		return $ret;
+		if ( ! crb_get_settings( 'prohibited_rule' ) ) {
+			cerber_block_add( null, 704, $username );
+		}
+
+		return crb_login_error( $username, 52 );
 	}
 
 	$user = wp_authenticate_username_password( $user, $username, $password );
@@ -1171,13 +1180,10 @@ function cerber_authenticate( $user, $username, $password = '' ) {
 	// Application passwords
 	$app_checked = false;
 	$app = false;
-	if ( ! ( $user instanceof WP_User )
-	     && function_exists( 'wp_authenticate_application_password' ) ) {
+	if ( ! ( $user instanceof WP_User ) ) {
 		$app_checked = true;
 		$user = wp_authenticate_application_password( $user, $username, $password );
-		if ( $user instanceof WP_User ) {
-			$app = true;
-		}
+		$app = $user instanceof WP_User;
 	}
 
     // TODO: split the function into two parts:
@@ -2158,8 +2164,8 @@ function cerber_user_logout( $status = null ) {
 function cerber_is_registration_prohibited( $user_login, $user_email = '' ) {
 
 	$code = null;
-	$msg = '';
-	$ret_msg = '';
+	$error_msg = '';
+	$custom_msg = '';
 	$wp_cerber = get_wp_cerber();
 
 	if ( crb_get_settings( 'regwhite' )
@@ -2168,56 +2174,58 @@ function cerber_is_registration_prohibited( $user_login, $user_email = '' ) {
         CRB_Globals::set_ctrl_setting( 'regwhite' );
 		cerber_log( 54, '', 0, 37 );
 		$code = 'ip_denied';
-		if ( ! $ret_msg = crb_get_settings( 'regwhite_msg' ) ) {
-			$msg = __( 'You are not allowed to register.', 'wp-cerber' );
+		if ( ! $custom_msg = crb_get_settings( 'regwhite_msg' ) ) {
+			$error_msg = __( 'You are not allowed to register.', 'wp-cerber' );
 		}
 	}
     elseif ( crb_is_reg_limit_reached() ) {
 	    CRB_Globals::set_ctrl_setting( 'reglimit_num' );
 	    cerber_log( 54, '', 0, 17 );
 		$code = 'ip_denied';
-		$msg = apply_filters( 'cerber_msg_denied', __( 'You are not allowed to register.', 'wp-cerber' ), 'register' );
+		$error_msg = apply_filters( 'cerber_msg_denied', __( 'You are not allowed to register.', 'wp-cerber' ), 'register' );
 	}
     elseif ( cerber_is_bot( 'botsreg' ) ) {
 	    CRB_Globals::set_ctrl_setting( 'botsreg' );
 		cerber_log( 54 );
 		$code = 'bot_detected';
-		$msg = apply_filters( 'cerber_msg_denied', __( 'You are not allowed to register.', 'wp-cerber' ), 'register' );
+		$error_msg = apply_filters( 'cerber_msg_denied', __( 'You are not allowed to register.', 'wp-cerber' ), 'register' );
 	}
     elseif ( ! $wp_cerber->reCaptchaValidate() ) {
 	    cerber_log( 54, '', 0 , CRB_STS_532 );
 		$code = 'incorrect_recaptcha';
-		$msg = $wp_cerber->reCaptchaMsg( 'register' );
+		$error_msg = $wp_cerber->reCaptchaMsg( 'register' );
 	}
     elseif ( crb_is_username_prohibited( $user_login ) ) {
 	    CRB_Globals::set_ctrl_setting( 'prohibited' );
 		cerber_log( 54, '', 0, CRB_STS_30 );
 		$code = 'prohibited_login';
-		$msg = apply_filters( 'cerber_msg_prohibited', __( 'Username is not allowed. Please choose another one.', 'wp-cerber' ), 'register' );
+		$error_msg = apply_filters( 'cerber_msg_prohibited', __( 'Username is not allowed. Please choose another one.', 'wp-cerber' ), 'register' );
 	}
     elseif ( ! cerber_is_email_permited( $user_email ) ) {
-	    CRB_Globals::set_ctrl_setting( 'emrule' );
+		CRB_Globals::set_ctrl_setting( 'emrule' );
 		cerber_log( 54, '', 0, 31 );
 		$code = 'prohibited_email';
-		$msg = apply_filters( 'cerber_msg_prohibited_email', __( 'Email address is not permitted.', 'wp-cerber' ) . ' ' . __( 'Please choose another one.', 'wp-cerber' ), 'register' );
+		if ( ! $custom_msg = crb_get_settings( 'emlist_msg' ) ) {
+			$error_msg = apply_filters( 'cerber_msg_prohibited_email', __( 'Email address is not permitted.', 'wp-cerber' ) . ' ' . __( 'Please choose another one.', 'wp-cerber' ), 'register' );
+		}
 	}
     elseif ( ! cerber_is_ip_allowed() || lab_is_blocked( cerber_get_remote_ip() ) ) {
 		cerber_log( 54 );
 		$code = 'ip_denied';
-		$msg = apply_filters( 'cerber_msg_denied', __( 'You are not allowed to register.', 'wp-cerber' ), 'register' );
+		$error_msg = apply_filters( 'cerber_msg_denied', __( 'You are not allowed to register.', 'wp-cerber' ), 'register' );
 	}
     elseif ( ! cerber_geo_allowed( 'geo_register' ) ) {
 		cerber_log( 54, '', 0, 16 );
 		$code = 'country_denied';
-		$msg = apply_filters( 'cerber_msg_denied', __( 'You are not allowed to register.', 'wp-cerber' ), 'register' );
+		$error_msg = apply_filters( 'cerber_msg_denied', __( 'You are not allowed to register.', 'wp-cerber' ), 'register' );
 	}
 
 	if ( $code ) {
-		if ( ! $ret_msg ) {
-			$ret_msg = '<strong>' . __( 'ERROR:', 'wp-cerber' ) . ' </strong>' . $msg;
+		if ( ! $custom_msg ) {
+			$custom_msg = '<strong>' . __( 'ERROR:', 'wp-cerber' ) . ' </strong>' . $error_msg;
 		}
 
-		return array( $code, $ret_msg );
+		return array( $code, $custom_msg );
 	}
 
 	return false;
@@ -5223,7 +5231,7 @@ function cerber_404_page( $simple = false ) {
     // Showing a simple 404 page
 
 	header( 'HTTP/1.0 404 Not Found', true, 404 );
-	echo '<html><head><title>404 Not Found</title></head><body><h1>Not Found</h1><p>The requested URL ' . esc_url( $_SERVER['REQUEST_URI'] ) . ' was not found on this server.</p></body></html>';
+	echo '<html><head><title>404 Not Found</title></head><body><h1>Not Found</h1><p>The requested URL ' . crb_escape_url( $_SERVER['REQUEST_URI'] ) . ' was not found on this server.</p></body></html>';
 	cerber_traffic_log(); // do not remove!
 
 	exit;
@@ -5464,10 +5472,13 @@ class CRB_Messaging {
 
 				$more = __( 'By the user', 'wp-cerber' ) . ': ' . $u . "\n";
 				$more .= __( 'From the IP address', 'wp-cerber' ) . ': ' . cerber_get_remote_ip() . "\n";
-				$whois = cerber_ip_whois_info( cerber_get_remote_ip() );
-				if ( ! empty( $whois['data']['country'] ) ) {
-					$more .= __( 'From the country', 'wp-cerber' ) . ': ' . cerber_country_name( $whois['data']['country'] );
+
+				$ip_rdap = CRB_RDAP_Client::get_parsed_ip_info( $ip );
+
+				if ( ! crb_is_wp_error( $ip_rdap ) && ! empty( $ip_rdap->country ) ) {
+					$more .= __( 'From the country', 'wp-cerber' ) . ': ' . crb_get_country_name( $ip_rdap->country );
 				}
+
 				break;
 			case 'activated':
 				$subj = '[' . $blogname . '] ' . __( 'The WP Cerber Security plugin is now active', 'wp-cerber' );
@@ -5730,7 +5741,7 @@ class CRB_Messaging {
 						/* translators: Here the first placeholder %s is a date of the last user login and the second placeholder %s is the user's IP address. */
 						$lastus = sprintf( __( 'Your last sign-in was at %s from the IP address %s', 'wp-cerber' ), cerber_date( $last['ts'], false ), $last_ip );
 
-						if ( $country = cerber_country_name( $last['cn'] ) ) {
+						if ( $country = crb_get_country_name( $last['cn'] ) ) {
 							$lastus .= ' (' . $country . ')';
 						}
 
@@ -6395,7 +6406,7 @@ function cerber_daily_run() {
 
 	cerber_upgrade_deferred();
 
-	crb_truncate_log_file( crb_get_diag_dir() . 'cerber-errors.log' );
+	crb_truncate_log_file( crb_get_diag_dir() . CRB_ERROR_LOG );
 
 	// TODO: implement holding previous values for a while
 	// cerber_antibot_gene();
@@ -6945,6 +6956,8 @@ function cerber_upgrade_all( $force = false ) {
 		define( 'CRB_DOING_UPGRADE', 1 );
 	}
 
+    cerber_load_admin_code();
+
 	crb_clear_admin_msg();
 	cerber_remove_issues();
 	cerber_create_db();
@@ -6956,6 +6969,7 @@ function cerber_upgrade_all( $force = false ) {
 	cerber_antibot_gene( true );
 	cerber_upgrade_settings( crb_array_get( $ver, 'v' ) );
 	cerber_htaccess_sync( 'main' );
+	cerber_htaccess_sync( 'media' );
 
 	cerber_bg_task_add( 'cerber_upgrade_deferred' );
 	delete_site_option( '_cerber_report' );
@@ -8979,7 +8993,7 @@ function cerber_error_control() {
 }
 
 /**
- * Saves PHP errors thrown in the WP Cerber code to a file
+ * Saves PHP errors thrown in the WP Cerber code to a file with minimal overhead
  *
  * @return void
  *
@@ -8996,6 +9010,13 @@ function cerber_save_errors() {
 
 	foreach ( $errors as $error_info ) {
 		$msg = $error_info[1];
+		$err_level = $error_info[0];
+
+		if ( E_WARNING == $err_level
+		     && strripos( $msg, 'Permission denied' ) ) {
+			continue;
+		}
+
 		$file = $error_info[2];
 		$uri = $error_info[4];
 
@@ -9005,7 +9026,7 @@ function cerber_save_errors() {
 			$file = substr( $file, 0, 1024 );
 			$uri = substr( $uri, 0, 1024 );
 
-			$crb_errors[] = array( $error_info[0], $msg, $file, $error_info[3], CERBER_VER, $php, $wp, $uri );
+			$crb_errors[] = array( $err_level, $msg, $file, $error_info[3], CERBER_VER, $php, $wp, $uri );
 		}
 	}
 
@@ -9025,7 +9046,7 @@ function cerber_save_errors() {
 	$dir = crb_get_diag_dir();
 
 	if ( ! $dir
-	     || ( ! $log = @fopen( $dir . 'cerber-errors.log', 'a' ) ) ) {
+	     || ( ! $log = @fopen( $dir . CRB_ERROR_LOG, 'a' ) ) ) {
 		return;
 	}
 
@@ -9154,7 +9175,7 @@ add_filter( 'wp_get_nav_menu_items', function ( $items, $menu, $args ) {
 add_filter( 'nav_menu_link_attributes', function ( $atts ) {
 
 	// For *MENU*CERBER* See cerber_nav_menu_box() !!!
-	if ( 0 === strpos( $atts['title'], '*MENU*CERBER*' ) ) {
+	if ( 0 === strpos( $atts['title'] ?? '', '*MENU*CERBER*' ) ) {
 		$title         = explode( '|', $atts['title'] );
 		$atts['title'] = '';
 

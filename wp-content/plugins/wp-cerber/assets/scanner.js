@@ -907,7 +907,7 @@ jQuery( function( $ ) {
     // Uploader
 
     let crb_upload_form = $('#crb-ref-upload-dialog').find('form');
-    let crb_upload_form_ul = $(crb_upload_form).find('ul');
+    let crb_upload_form_ul = crb_upload_form.find('ul');
 
     crb_upload_form.on('submit', function (event) {
 
@@ -917,10 +917,8 @@ jQuery( function( $ ) {
 
         crb_upload_form.find('input').prop('disabled', true);
         crb_upload_form.find('input').hide();
-        //crb_upload_form_ul.find('li').not(':nth-child(-n+2)').hide();
         crb_upload_form_ul.children().hide();
         crb_upload_form_ul.find('li:nth-child(1)').show();
-        //ref_file_name = $(this).find('input[name="refile"]').val();
 
         $.ajax({
             url: ajaxurl,
@@ -930,41 +928,100 @@ jQuery( function( $ ) {
             contentType: false,
             processData: false,
             dataType: 'json'
-        }).done(crb_ref_step2);
+        }).done(function (response) {
+            if (!response.error) {
+                crb_ref_step2(response);
+            } else {
+                crb_ref_done(response);
+            }
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.error('AJAX upload failed:', {
+                status: jqXHR.status,
+                statusText: jqXHR.statusText,
+                error: errorThrown,
+                textStatus: textStatus,
+                responseText: jqXHR.responseText
+            });
 
-        crb_upload_form.trigger('reset');
+            crb_ref_errors({
+                textStatus: textStatus,
+                errorThrown: errorThrown,
+                status: jqXHR.status
+            }, 'File upload error');
+
+            crb_enable_ref_form();
+        });
+
         event.preventDefault();
     });
 
     function crb_ref_step2(server_response) {
-        if (!server_response.error) {
-            crb_upload_form_ul.find('li:nth-child(2)').show();
+        crb_upload_form_ul.find('li:nth-child(2)').show();
 
-            $.post(ajaxurl, {
-                    action: 'cerber_ref_upload',
-                    ajax_nonce: crb_ajax_nonce,
-                },
-                crb_ref_done,
-                'json');
-        }
-        else {
-            crb_ref_done(server_response);
-        }
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'cerber_ref_upload',
+                ajax_nonce: crb_ajax_nonce
+            }
+        }).done(crb_ref_done)
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Request failed:', {
+                    status: jqXHR.status,
+                    statusText: jqXHR.statusText,
+                    error: errorThrown,
+                    textStatus: textStatus
+                });
+
+                crb_ref_errors({
+                    textStatus: textStatus,
+                    errorThrown: errorThrown,
+                    status: jqXHR.status
+                }, 'File processing error');
+
+                crb_enable_ref_form();
+            });
     }
 
     function crb_ref_done(server_response) {
-        crb_ref_errors(server_response);
+        crb_ref_errors(server_response, 'Process aborted');
+
         if (!server_response.error) {
             tb_remove();
         }
+
         crb_enable_ref_form();
     }
 
-    function crb_ref_errors(response) {
-        if (response.error) {
-            crb_upload_form_ul.append('<li style="color: #dd1320;">Process aborted</li>');
-            crb_upload_form_ul.append('<li style="color: #dd1320;">' + response.error + '</li>');
+    function crb_ref_errors(response, prefix) {
+        let message = '';
+
+        if (response && response.error) {
+            message = response.error;
+        } else if (response && (response.textStatus || response.errorThrown)) {
+            message = 'Request failed: ' + response.textStatus;
+            if (response.errorThrown && response.errorThrown !== response.textStatus) {
+                message += ' - ' + response.errorThrown;
+            }
+            if (response.status) {
+                message += ' (HTTP ' + response.status + ')';
+                if (response.status === 500) {
+                    message += '<p style="color: #000;">A server-side error occurred. Open the “WP Cerber Software Errors” section on the Tools / Diagnostic tab to check for possible issues. If the section is missing or contains no relevant messages, check the server error log to identify the cause.</p>';
+                }
+            }
+        } else if (response instanceof Error) {
+            message = response.message || 'Unexpected error';
+        } else {
+            message = 'Unknown error';
         }
+
+        if (prefix) {
+            crb_upload_form_ul.append('<li style="color: #dd1320;">' + prefix + '</li>');
+        }
+
+        crb_upload_form_ul.append('<li style="color: #dd1320;">' + message + '</li>');
     }
 
     function crb_enable_ref_form() {
