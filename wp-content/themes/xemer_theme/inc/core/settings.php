@@ -1,4 +1,18 @@
 <?php
+// Setup theme setting page
+if (function_exists('acf_add_options_page')) {
+    acf_add_options_page(
+        array(
+            'page_title' => 'Theme Settings',
+            'menu_title' => 'Theme Settings',
+            'menu_slug' => 'theme-settings',
+            'capability' => 'edit_posts',
+            'redirect' => false,
+            'position' => 80
+        )
+    );
+}
+
 // tối đa revision
 add_filter('wp_revisions_to_keep', function ($num, $post) {
     return 3;
