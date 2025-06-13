@@ -15,9 +15,9 @@
  */
 
 get_header();
-?>
 
-Viết html tại đây.
+// components
+include_once get_template_directory() . '/template-parts/components/hero.php';
+include_once get_template_directory() . '/template-parts/components/button.php';
 
-<?php
 get_footer();
