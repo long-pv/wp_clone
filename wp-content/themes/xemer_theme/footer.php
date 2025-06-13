@@ -1,4 +1,5 @@
 <?php
+
 /**
  * The template for displaying the footer
  *
@@ -11,7 +12,11 @@
 
 ?>
 
-<footer class="page_footer">
+</main>
+<!-- end main body -->
+
+<!-- footer -->
+<footer id="footer" class="footer secSpace">
 	<!-- nội dung -->
 </footer>
 
