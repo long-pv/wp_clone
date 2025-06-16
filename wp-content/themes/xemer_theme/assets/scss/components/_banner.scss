@@ -1,0 +1,19 @@
+.banner {
+    &__item {
+        background-color: rgba($primary, 0.5);
+    }
+
+    &__content {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    &__title {
+        color: #fff;
+    }
+
+    &__desc {
+        color: #fff;
+    }
+}

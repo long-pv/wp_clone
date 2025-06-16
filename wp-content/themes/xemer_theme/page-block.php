@@ -17,7 +17,7 @@
 get_header();
 
 // components
-include_once get_template_directory() . '/template-parts/components/hero.php';
-include_once get_template_directory() . '/template-parts/components/button.php';
+include_once get_template_directory() . '/template-parts/components/banner.php';
+include_once get_template_directory() . '/template-parts/components/featured.php';
 
 get_footer();
