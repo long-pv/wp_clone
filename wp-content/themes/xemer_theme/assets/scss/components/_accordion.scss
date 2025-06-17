@@ -1,0 +1,41 @@
+.accordion {
+    &__item {
+        margin-bottom: 16px;
+    }
+
+    &__body {
+        padding: 16px;
+        background-color: #fff;
+    }
+
+    &__btn {
+        position: relative;
+        color: $primary;
+        padding: 16px;
+        border: none;
+        transition: all 0.5s;
+        text-decoration: none;
+        width: 100%;
+        outline: none !important;
+        text-align: start;
+        text-decoration: none !important;
+        font-weight: 700 !important;
+
+        // Close item accordion
+        &::after {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%) rotate(0deg);
+            transition: all 0.3s;
+            content: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.5081 15.5942L15.4781 13.6242L18.6881 10.4142C19.3581 9.73422 18.8781 8.57422 17.9181 8.57422H11.6881H6.07812C5.11812 8.57422 4.63812 9.73422 5.31812 10.4142L10.4981 15.5942C11.3181 16.4242 12.6781 16.4242 13.5081 15.5942Z' fill='%232E2E2E'/%3E%3C/svg%3E%0A");
+        }
+
+        // Open item accordion
+        &[aria-expanded="true"]::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+    }
+}

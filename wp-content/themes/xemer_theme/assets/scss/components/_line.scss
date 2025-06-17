@@ -1,0 +1,47 @@
+@mixin line-clamp($lines) {
+    -webkit-line-clamp: $lines;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+}
+
+.line-1 {
+    @include line-clamp(1);
+}
+
+.line-2 {
+    @include line-clamp(2);
+}
+
+.line-3 {
+    @include line-clamp(3);
+}
+
+.line-4 {
+    @include line-clamp(4);
+}
+
+.line-5 {
+    @include line-clamp(5);
+}
+
+.line-6 {
+    @include line-clamp(6);
+}
+
+.line-7 {
+    @include line-clamp(7);
+}
+
+.line-8 {
+    @include line-clamp(8);
+}
+
+.line-9 {
+    @include line-clamp(9);
+}
+
+.line-10 {
+    @include line-clamp(10);
+}
