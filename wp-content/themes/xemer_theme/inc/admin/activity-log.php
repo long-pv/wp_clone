@@ -75,13 +75,20 @@ add_action('before_delete_post', function ($post_id) {
 
 // Giao diện admin
 add_action('admin_menu', function () {
-    add_menu_page('User Activity Log', 'Activity Log', 'manage_options', 'user-activity-log', 'ual_render_log_page', 'dashicons-list-view', 80);
+    add_users_page('User Activity Log', 'Activity Log', 'list_users', 'user-activity-log', 'ual_render_log_page');
 });
 
 // Render bảng log (không có cột ID)
 function ual_render_log_page()
 {
     global $wpdb;
+
+    // Xử lý xoá log nếu gửi form
+    if (isset($_POST['ual_delete_logs']) && check_admin_referer('ual_delete_logs_action')) {
+        $wpdb->query("DELETE FROM {$wpdb->prefix}user_activity_log");
+        echo '<div class="notice notice-success"><p>Đã xoá toàn bộ log.</p></div>';
+    }
+
     $table = $wpdb->prefix . 'user_activity_log';
     $per_page = 20;
     $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
@@ -91,6 +98,14 @@ function ual_render_log_page()
     $logs = $wpdb->get_results("SELECT * FROM $table ORDER BY log_time DESC LIMIT $offset, $per_page");
 
     echo '<div class="wrap"><h1>User Activity Log</h1>';
+    if ($logs) {
+        // FORM XOÁ
+        echo '<form method="post" style="margin-bottom: 20px;">';
+        wp_nonce_field('ual_delete_logs_action');
+        echo '<input type="submit" name="ual_delete_logs" class="button button-secondary" value="🗑️ Xoá toàn bộ log" onclick="return confirm(\'Bạn chắc chắn muốn xoá toàn bộ log?\');">';
+        echo '</form>';
+    }
+    // table
     echo '<table class="widefat fixed striped"><thead><tr>';
     echo '<th>User</th><th>Action</th><th>Post</th><th>IP</th><th>Time</th>';
     echo '</tr></thead><tbody>';
