@@ -135,3 +135,28 @@ function remove_weak_password_button_script()
     </script>
 <?php
 }
+
+// người dùng chưa đăng nhập sẽ k truy cập vào /wp-admin
+add_action('init', 'custom_block_wp_admin_access');
+function custom_block_wp_admin_access()
+{
+    if (!is_admin() || is_user_logged_in()) {
+        return;
+    }
+
+    if (defined('DOING_AJAX') && DOING_AJAX) {
+        return;
+    }
+
+    wp_die(
+        '<h1>Access Denied</h1>
+         <p>You do not have permission to access the admin area. Please log in to continue.</p>
+         <p>
+            <a href="' . home_url() . '" style="display:inline-block;margin-top:10px;padding:8px 16px;background:#0073aa;color:#fff;text-decoration:none;border-radius:4px;">
+                Back to Homepage
+            </a>
+         </p>',
+        'Unauthorized Access',
+        array('response' => 403)
+    );
+}
