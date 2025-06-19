@@ -28,6 +28,18 @@ add_action('login_init', function () {
         return;
     }
 
+    // Chặn action không cho phép
+    if (
+        isset($_GET['action']) &&
+        in_array($_GET['action'], ['lostpassword', 'retrievepassword', 'resetpass', 'rp', 'register'])
+    ) {
+        wp_die(
+            '<h1>Access Denied</h1><p>Password recovery and registration are disabled.</p>',
+            'Unauthorized Access',
+            array('response' => 403)
+        );
+    }
+
     // Chặn nếu truy cập trực tiếp wp-login.php (không qua /backend)
     if (
         strpos($request_uri, '/wp-login.php') !== false &&
@@ -53,3 +65,15 @@ add_filter('site_url', function ($url, $path, $scheme, $blog_id) {
 add_filter('logout_redirect', function ($redirect_to, $requested_redirect_to, $user) {
     return site_url('backend');
 }, 10, 3);
+
+// Ẩn "Lost your password?" và "Go to site" trong trang login
+add_action('login_footer', function () {
+?>
+    <style>
+        .login #nav,
+        .login #backtoblog {
+            display: none !important;
+        }
+    </style>
+<?php
+});
