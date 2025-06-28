@@ -8,10 +8,10 @@ require_once get_template_directory() . '/inc/core/auto-active-plugin.php';
 require_once get_template_directory() . '/inc/core/settings.php';
 
 // ===== ADMIN =====
-require_once get_template_directory() . '/inc/admin/index.php';
-require_once get_template_directory() . '/inc/admin/size-image.php';
-require_once get_template_directory() . '/inc/admin/custom-login-url.php';
-require_once get_template_directory() . '/inc/admin/activity-log.php';
+// require_once get_template_directory() . '/inc/admin/index.php';
+// require_once get_template_directory() . '/inc/admin/size-image.php';
+// require_once get_template_directory() . '/inc/admin/custom-login-url.php';
+// require_once get_template_directory() . '/inc/admin/activity-log.php';
 
 // ===== CUSTOM POSTS =====
 require_once get_template_directory() . '/inc/custom-posts/cpt_custom.php';
