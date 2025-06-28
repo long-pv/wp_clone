@@ -160,3 +160,6 @@ function custom_block_wp_admin_access()
         array('response' => 403)
     );
 }
+
+// chặn các request đến XML-RPC API (xmlrpc.php)
+add_filter('xmlrpc_enabled', '__return_false');
