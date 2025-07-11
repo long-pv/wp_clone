@@ -17,8 +17,12 @@ require_once get_template_directory() . '/inc/core/settings.php';
 require_once get_template_directory() . '/inc/custom-posts/cpt_custom.php';
 
 // ===== FUNCTIONS =====
-require_once get_template_directory() . '/inc/functions/breadcrumbs.php';
-require_once get_template_directory() . '/inc/functions/shortcodes.php';
+$inc_files = glob(get_template_directory() . '/inc/functions/*.php');
+if (!empty($inc_files)) {
+    foreach ($inc_files as $file) {
+        require_once $file;
+    }
+}
 
 // ===== PLUGINS =====
 require_once get_template_directory() . '/inc/plugins/acf.php';
