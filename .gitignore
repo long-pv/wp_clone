@@ -55,6 +55,7 @@ wp-content/languages/
 wp-content/plugins/*/*.txt
 wp-content/backups-dup-lite/
 wp-content/upgrade/
+wp-content/themes/*/node_modules/
 # wp-content/themes/*/languages/
 # wp-content/themes/*/assets/css/
 wp-content/themes/*/js
